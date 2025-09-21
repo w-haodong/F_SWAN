@@ -82,12 +82,6 @@ if __name__ == '__main__':
     peft_encoder = get_peft_model(sam_model, lora_config)
     peft_encoder.print_trainable_parameters()
 
-    if args.phase == 'train':
-        is_object = train.Network(args, peft_encoder)
-        is_object.train_network(args)
-    elif args.phase == 'test':
+    if args.phase == 'test':
         is_object = test.Network(args, peft_encoder)
         is_object.test(args)
-    elif args.phase == 'eval':
-        is_object = eval.Network(args, peft_encoder)
-        is_object.eval_base(args)
