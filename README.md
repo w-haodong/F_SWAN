@@ -4,6 +4,9 @@
 
 ![flow_chart](https://github.com/user-attachments/assets/40d29c9d-6a51-4be1-a338-ed0513525b61)
 
+
+### We thank Meta AI for making the source code of segment anything publicly available. (SAM: https://github.com/facebookresearch/segment-anything)
+
 #### Datasets: The dataset used in this paper is from AASCE 2019 (https://aasce19.grand-challenge.org/).
 
 #### In this Github repository we provide the test code along with the pre-trained parameters file (shared via an online storage: model_10_200.pth, link: https://pan.baidu.com/s/13s4lfQI1F1JBxMucFjDXUg?pwd=tbej code: tbej). 
