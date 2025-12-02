@@ -63,7 +63,7 @@ class Network(object):
 
 
     def test(self, args):
-        save_path =  args.work_dir+'/weights'
+        save_path =  args.work_dir+'/weights_spinal'
         self.model = self.load_model(self.model, os.path.join(save_path, args.resume))
         self.model = self.model.to(self.device)
         self.model.eval()
