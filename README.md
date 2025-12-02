@@ -6,7 +6,7 @@ Clinical deployment of foundation models for automated Cobb angle measurement fa
 ![flow_chart](https://github.com/user-attachments/assets/40d29c9d-6a51-4be1-a338-ed0513525b61)
 
 ## Acknowledgements
-We thank Meta AI for making the source code of segment anything publicly available. (SAM: https://github.com/facebookresearch/segment-anything)
+We thank Meta AI for making the source code of Dino Vs publicly available. ([Dino: https://github.com/facebookresearch/segment-anything](https://github.com/facebookresearch/dinov3))
 
 ## Datasets
 The dataset used in this paper is from AASCE 2019 (https://aasce19.grand-challenge.org/).
