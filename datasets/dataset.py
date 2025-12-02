@@ -18,7 +18,7 @@ from operation import transform
 # -----------------------------------------------------------------------------
 def calculate_wavelet_descriptors(contour, wavelet='db4', level=4):
     """
-    【新增】使用离散小波变换(DWT)为2D轮廓计算一维描述子。
+    使用离散小波变换(DWT)为2D轮廓计算一维描述子。
     """
     x_signal = contour[:, 0]
     y_signal = contour[:, 1]
@@ -30,7 +30,7 @@ def calculate_wavelet_descriptors(contour, wavelet='db4', level=4):
 
 def reconstruct_from_wavelet_coeffs(wavelet_coeffs_flat, wavelet, level, original_len, coeffs_len_per_axis):
     """
-    【新增】从小波系数向量逆变换回轮廓点，用于可视化验证。
+    从小波系数向量逆变换回轮廓点，用于可视化验证。
     """
     coeffs_x_flat = wavelet_coeffs_flat[:coeffs_len_per_axis]
     coeffs_y_flat = wavelet_coeffs_flat[coeffs_len_per_axis:]
@@ -61,7 +61,7 @@ def reconstruct_from_wavelet_coeffs(wavelet_coeffs_flat, wavelet, level, origina
 # -----------------------------------------------------------------------------
 def generate_sharp_contour_from_corners(pts_4, num_points=128):
     """
-    【保留】从4个角点生成一个有锐利拐角的四边形密集轮廓。
+    从4个角点生成一个有锐利拐角的四边形密集轮廓。
     """
     pts_4_closed = np.vstack([pts_4, pts_4[0]])
     polygon_pts = np.empty((0, 2), dtype=np.float32)
@@ -72,7 +72,6 @@ def generate_sharp_contour_from_corners(pts_4, num_points=128):
     return polygon_pts
 
 def rearrange_pts(pts):
-    # 【保留】您的原始函数
     boxes = []
     for k in range(0, len(pts), 4):
         pts_4 = pts[k:k+4,:]
@@ -107,7 +106,7 @@ class BaseDataset(data.Dataset):
         self.input_w = self.args.input_w
         self.down_ratio = self.args.down_ratio
         
-        # 【修正1】确保 self.labeled_subset 被正确赋值
+        # 确保 self.labeled_subset 被正确赋值
         self.labeled_subset = labeled_subset
 
         if phase == 'train':
@@ -217,28 +216,6 @@ class BaseDataset(data.Dataset):
         }
         return np.ascontiguousarray(canvas), out_pts, meta
 
-    # 下面两个老函数保留，但不再使用（兼容性考虑）
-    def _pad_image_width_to_match_height(self, image: np.ndarray):
-        # 【保留但不再在 __getitem__ 中调用】
-        ori_h, ori_w = image.shape[0], image.shape[1]
-        pad_left = 0
-        if ori_w < ori_h:
-            delta_w = ori_h - ori_w
-            pad_left = delta_w // 2
-            pad_right = delta_w - pad_left
-            is_color = len(image.shape) == 3 and image.shape[2] == 3
-            fill_value = [0, 0, 0] if is_color else [0]
-            padded_image = cv2.copyMakeBorder(image, 0, 0, pad_left, pad_right, cv2.BORDER_CONSTANT, value=fill_value)
-            return padded_image, pad_left
-        return image, pad_left
-        
-    def _adjust_pts_for_padding(self, pts: np.ndarray, pad_left: int):
-        if pad_left == 0 or (pts is not None and pts.shape[0] == 0):
-            return pts.astype(np.float32).copy() if pts is not None else None
-        adjusted_pts = pts.astype(np.float32).copy()
-        adjusted_pts[:, 0] += pad_left
-        return adjusted_pts
-
     def __getitem__(self, index):
         img_id = self.img_ids[index]
         image_ori = self.load_image(index)
@@ -333,13 +310,13 @@ class BaseDataset(data.Dataset):
         return len(self.img_ids)
 
 # -----------------------------------------------------------------------------
-# 5. GT 生成主函数 (核心修改区域)
+# 5. GT 生成主函数 
 # -----------------------------------------------------------------------------
 def generate_ground_truth(image_tensor, pts_2, image_h, image_w,
                                   img_id, vis_dir, num_dense_points, wavelet_type, wavelet_level,
                                   coeffs_len_per_axis, total_coeffs_len, down_ratio):
     """
-    【最终修正版】生成GT，并在预处理后的图像(out_image)上进行正确的坐标空间可视化。
+    生成GT，并在预处理后的图像(out_image)上进行正确的坐标空间可视化。
     """
     # --- 1. 参数与初始化 ---
     NUM_VERTEBRAE = 17
@@ -361,7 +338,7 @@ def generate_ground_truth(image_tensor, pts_2, image_h, image_w,
         vis_image_np = np.transpose(vis_image_np, (1, 2, 0))
         vis_image = cv2.cvtColor(vis_image_np, cv2.COLOR_RGB2BGR).copy()
         
-        # 【关键】计算正确的下采样率，用于将特征图坐标放大回可视化图像的坐标
+        # 计算正确的下采样率，用于将特征图坐标放大回可视化图像的坐标
         down_ratio = vis_image.shape[0] / output_h
 
     # --- 3. 遍历每个椎体 ---
