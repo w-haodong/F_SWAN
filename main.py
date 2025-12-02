@@ -49,7 +49,6 @@ def parse_args():
     parser.add_argument('--num_train_f_sample', type=int, default=10) # 少样本训练数量
     parser.add_argument('--num_code_run', type=int, default=0, help='Number of code running')
 
-    # ====== 修改：加入 flops 选项 ======
     parser.add_argument('--phase', type=str, default='test', choices=['train', 'test', 'eval', 'flops'],
                         help='train, test, eval, or flops')
     parser.add_argument('--eval_data', type=str, default='test')
@@ -103,7 +102,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    # ---- 小波系数长度计算（原样保留）----
+    # ---- 小波系数长度计算----
     dummy_signal = np.zeros(args.num_dense_points)
     dummy_coeffs = pywt.wavedec(dummy_signal, args.wavelet_type, level=args.wavelet_level)
     coeffs_len_per_axis = sum(len(c) for c in dummy_coeffs)
@@ -142,7 +141,6 @@ def _build_encoder(args, device):
     return dino_model
 
 
-# ====== 新增：THOP wrapper（避免 thop 处理 dict 输出不稳定）======
 class _FlopsWrapper(nn.Module):
     def __init__(self, spinal_model: nn.Module):
         super().__init__()
@@ -161,7 +159,6 @@ def _run_flops(args, peft_encoder):
 
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
-    # 你的 heads（与训练一致）
     total_wavelet_coeffs = args.coeffs_len_per_axis * 2
     heads = {
         'hm': args.num_classes,
@@ -178,13 +175,11 @@ def _run_flops(args, peft_encoder):
 
     wrapped = _FlopsWrapper(model).to(device).eval()
 
-    # dummy 输入（与你实际输入分辨率一致）
     x = torch.randn(1, 3, args.input_h, args.input_w, device=device)
 
     with torch.no_grad():
         macs, params = profile(wrapped, inputs=(x,), verbose=False)
 
-    # thop 输出通常更接近 MACs；如果你按 FLOPs=2*MACs，则：
     flops = 2.0 * macs
 
     print("\n========== Model Complexity (THOP) ==========")
@@ -218,5 +213,6 @@ if __name__ == '__main__':
     if args.phase == 'test':
         is_object = test.Network(args, peft_encoder)
         is_object.test(args)
+
 
 
