@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument('--num_code_run', type=int, default=0, help='Number of code running')
 
     # ====== 修改：加入 flops 选项 ======
-    parser.add_argument('--phase', type=str, default='train', choices=['train', 'test', 'eval', 'flops'],
+    parser.add_argument('--phase', type=str, default='test', choices=['train', 'test', 'eval', 'flops'],
                         help='train, test, eval, or flops')
     parser.add_argument('--eval_data', type=str, default='test')
     parser.add_argument('--dataset', type=str, default='spinal', help='dataset name')
@@ -61,7 +61,7 @@ def parse_args():
     parser.add_argument(
         "-chk", "--checkpoint",
         type=str,
-        default="/CSTemp/whd/work/sco_syb/whd_v4/models/sam/work_dir/sam_vit_b_01ec64.pth",
+        default="./models/pth/sam_vit_b_01ec64.pth",
         help="path to the trained SAM model"
     )
     parser.add_argument(
@@ -74,7 +74,7 @@ def parse_args():
     parser.add_argument(
         '--dino_checkpoint',
         type=str,
-        default='/CSTemp/whd/work/sco_syb/dino_syb/whd_v5_dino/models/pth/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth',
+        default='./models/pth/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth',
         help="Path to DINOv3 ViT-B/16 weights."
     )
 
@@ -88,9 +88,9 @@ def parse_args():
     parser.add_argument('--ssda_mode', type=str, default='joint_train', choices=['none', 'joint_train'])
     parser.add_argument('--warmup_epochs', type=int, default=0)
     parser.add_argument('--consistency_weight_max', type=float, default=1)
-    parser.add_argument('--consistency_start_epochs', type=int, default=10)
+    parser.add_argument('--consistency_start_epochs', type=int, default=30)
     parser.add_argument('--ema_start_epoch', type=int, default=25)
-    parser.add_argument('--consistency_rampup_epochs', type=int, default=10)
+    parser.add_argument('--consistency_rampup_epochs', type=int, default=30)
     parser.add_argument('--uda_top_k_schedule', type=int, nargs='+', default=[10, 17, 10])
     parser.add_argument('--pseudo_label_thresh', type=float, default=0.2)
     parser.add_argument('--ema_decay', type=float, default=0.995)
@@ -218,4 +218,5 @@ if __name__ == '__main__':
     if args.phase == 'test':
         is_object = test.Network(args, peft_encoder)
         is_object.test(args)
+
 
