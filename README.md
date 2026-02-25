@@ -8,7 +8,7 @@ Low-dose biplanar radiographs acquired by the EOS imaging system (EOS) are incre
 
 
 ## Acknowledgements
-We thank Meta AI for making the source code of Dino V3 publicly available. ([Dino: https://github.com/facebookresearch/segment-anything](https://github.com/facebookresearch/dinov3))
+We thank Meta AI for making the source code of Dino V3 publicly available. ([Dino: https://github.com/facebookresearch/dinov3](https://github.com/facebookresearch/dinov3))
 
 ## Datasets
 The dataset used in this paper is from AASCE 2019 (https://aasce19.grand-challenge.org/).
