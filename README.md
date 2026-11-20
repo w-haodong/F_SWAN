@@ -21,20 +21,20 @@ python -m pip install -r requirements.txt
 python -m pip install --no-deps "git+https://github.com/facebookresearch/dinov3.git@6876159a11b4df116f30f667f8c9888617df0751"
 ~~~
 
-Provide the [DINOv3 ViT-B/16 LVD-1689M backbone weights](https://github.com/facebookresearch/dinov3#pretrained-models) and a compatible F-SWAN ViT-B LoRA wavelet checkpoint. Run inference on an uncropped frontal radiograph in PNG or JPEG format.
+Download the [F-SWAN inference checkpoint (28 MiB)](https://github.com/w-haodong/F_SWAN/releases/download/inference-v1/fswan-vitb-lora-eos-10l-70u.pth), trained with 10 labeled and 70 unlabeled EOS images. Obtain the matching backbone file, `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth`, from the [official DINOv3 repository](https://github.com/facebookresearch/dinov3#pretrained-models). The loader checks the backbone's SHA-256 before combining it with the released F-SWAN parameters.
+
+Run inference on an uncropped frontal radiograph in PNG or JPEG format.
 
 ~~~sh
 python infer.py \
   --image radiograph.png \
-  --checkpoint /path/to/fswan_wavelet.pth \
-  --dino-checkpoint /path/to/dinov3_vitb16.pth \
+  --checkpoint /path/to/fswan-vitb-lora-eos-10l-70u.pth \
+  --dino-checkpoint /path/to/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth \
   --device auto \
   --output prediction.json
 ~~~
 
 The inference pipeline resizes and pads the image to 1280 × 512 pixels, reconstructs wavelet contours, and fits vertebral corners jointly with Huber regression. The JSON output contains the proximal thoracic, main thoracic, and thoracolumbar/lumbar Cobb angles in degrees and the predicted corners in the original image coordinate system. Use `--device cpu` or `--device cuda:0` to select a device explicitly.
-
-The `model_latest.pth` link in the [previous README](https://github.com/w-haodong/F_SWAN/blob/6c681dd22eb0100b27ba25b10420ec04631e3fb5/README.md) refers to the original test release. Use weights compatible with the inference architecture described above.
 
 ## Data
 
