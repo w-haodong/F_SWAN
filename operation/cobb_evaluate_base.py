@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from PIL import Image, ImageDraw, ImageFont
 
 def is_S(mid_p_v):
     # mid_p_v:  34 x 2

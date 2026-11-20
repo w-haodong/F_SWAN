@@ -155,7 +155,9 @@ class DecNet(nn.Module):
                 if hasattr(m, 'bias') and m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def forward(self, vit_block_outputs: List[torch.Tensor]) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor]:
+    def forward(
+        self, vit_block_outputs: List[torch.Tensor], *, compute_style: bool = True
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor | None]:
         # FPN风格的自顶向下融合
         if not isinstance(vit_block_outputs, list) or len(vit_block_outputs) != self.num_vit_block_inputs:
             raise ValueError(f"Expected {self.num_vit_block_inputs} features, got {len(vit_block_outputs)}")
@@ -191,8 +193,10 @@ class DecNet(nn.Module):
         content_features_pooled = F.adaptive_avg_pool2d(content_features_map, 1).view(content_features_map.size(0), -1)
 
         # 风格路径: 生成风格特征 (注意输入是 current_fused_feature，保证路径独立)
-        style_features_map = self.style_path(current_fused_feature)
-        style_features_pooled = F.adaptive_avg_pool2d(style_features_map, 1).view(style_features_map.size(0), -1)
+        style_features_pooled = None
+        if compute_style:
+            style_features_map = self.style_path(current_fused_feature)
+            style_features_pooled = F.adaptive_avg_pool2d(style_features_map, 1).view(style_features_map.size(0), -1)
         
         # 返回三组输出: 任务预测字典, 池化后的内容特征, 池化后的风格特征
         return dec_dict, content_features_pooled, style_features_pooled

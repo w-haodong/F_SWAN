@@ -1,20 +1,6 @@
 # 文件: operation/decoder.py
 import torch
-import torch.nn.functional as F
-
-def _gather_feat(feat, ind):
-    """根据一维索引，从一个扁平化的特征图中抓取特征。"""
-    dim = feat.size(2)
-    ind = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
-    feat = feat.gather(1, ind)
-    return feat
-
-def _tranpose_and_gather_feat(feat, ind):
-    """将(B,C,H,W)的特征图变形，并根据索引抓取特征。"""
-    feat = feat.permute(0, 2, 3, 1).contiguous()
-    feat = feat.view(feat.size(0), -1, feat.size(3))
-    feat = _gather_feat(feat, ind)
-    return feat
+from .tensor_ops import gather_spatial_features
 
 def _get_topk_with_iterative_suppression(heat: torch.Tensor, K: int, suppression_radius: int):
     """
@@ -31,25 +17,23 @@ def _get_topk_with_iterative_suppression(heat: torch.Tensor, K: int, suppression
     # 為了不修改原始熱圖，創建一個副本
     heat_clone = heat.clone()
 
-    for b in range(batch_size):
-        for k in range(K):
-            # 1. 找到當前熱圖的全局最大值
-            max_score, max_ind = torch.max(heat_clone[b].view(-1), 0)
-            max_y = (max_ind // width).item()
-            max_x = (max_ind % width).item()
-
-            # 2. 保存結果
-            topk_scores[b, k] = max_score
-            topk_inds[b, k] = max_ind
-            topk_ys[b, k] = float(max_y)
-            topk_xs[b, k] = float(max_x)
-
-            # 3. "抹黑"（抑制）該點周圍的鄰域
-            y_start = max(0, max_y - suppression_radius)
-            y_end = min(height, max_y + suppression_radius + 1)
-            x_start = max(0, max_x - suppression_radius)
-            x_end = min(width, max_x + suppression_radius + 1)
-            heat_clone[b, 0, y_start:y_end, x_start:x_end] = 0
+    offsets = torch.arange(-suppression_radius, suppression_radius + 1, device=heat.device)
+    dy, dx = torch.meshgrid(offsets, offsets, indexing='ij')
+    dy, dx = dy.reshape(1, -1), dx.reshape(1, -1)
+    flat = heat_clone.view(batch_size, -1)
+    for k in range(K):
+        # Keep sequential peak suppression and first-index tie breaking, while
+        # processing the batch together and keeping all indices on the device.
+        max_score, max_ind = flat.max(dim=1)
+        max_y = torch.div(max_ind, width, rounding_mode='floor')
+        max_x = max_ind.remainder(width)
+        topk_scores[:, k] = max_score
+        topk_inds[:, k] = max_ind
+        topk_ys[:, k] = max_y
+        topk_xs[:, k] = max_x
+        ys = (max_y[:, None] + dy).clamp(0, height - 1)
+        xs = (max_x[:, None] + dx).clamp(0, width - 1)
+        flat.scatter_(1, ys * width + xs, 0.)
 
     return topk_scores, topk_inds, topk_ys, topk_xs
 
@@ -60,7 +44,7 @@ class DecDecoder(object):
     """
     def decode(self, heat: torch.Tensor, reg: torch.Tensor, wavelet: torch.Tensor, 
                K: int = 17, 
-               suppression_radius: int = 3) -> torch.Tensor: # 對於256的圖，半徑3或4比較合適
+               suppression_radius: int = 3, return_indices: bool = False) -> torch.Tensor: # 對於256的圖，半徑3或4比較合適
         
         batch_size = heat.size(0)
 
@@ -76,8 +60,8 @@ class DecDecoder(object):
         scores, inds, ys, xs = _get_topk_with_iterative_suppression(heat_clone, K, suppression_radius)
         
         # 步驟 2: 提取對應的偏移量和小波係數
-        reg_gathered = _tranpose_and_gather_feat(reg, inds)
-        wavelet_pred_gathered = _tranpose_and_gather_feat(wavelet, inds)
+        reg_gathered = gather_spatial_features(reg, inds)
+        wavelet_pred_gathered = gather_spatial_features(wavelet, inds)
         
         # 步驟 3: 計算最終的精確中心點座標
         final_xs = xs + reg_gathered[..., 0]
@@ -99,4 +83,6 @@ class DecDecoder(object):
             wavelet_pred_sorted
         ], dim=2)
         
+        if return_indices:
+            return detections, torch.gather(inds, 1, sort_inds)
         return detections

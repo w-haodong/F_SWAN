@@ -1,20 +1,37 @@
-# Few-shot Semi-supervised Wavelet Adaptation for Automated Cobb Angle Measurement in Full-body EOS Radiographs
+# Few-Shot Semi-Supervised Wavelet Adaptation for Automated Cobb Angle Measurement on Uncropped Full-Body Radiographs
 
-## Abstract 
-Low-dose biplanar radiographs acquired by the EOS imaging system (EOS) are increasingly adopted for scoliosis follow-up because they provide weight-bearing full-body imaging, enabling clinicians to assess spinal curvature together with global alignment cues from the head, shoulders, pelvis, and lower limbs. In this practical setting, automated Cobb angle measurement must operate directly on uncropped full-body scans, yet robust model development is hindered by the scarcity of expert-annotated EOS data and the domain and field-of-view gap to public narrow-view radiographs. We propose F-SWAN (Few-shot Semi-supervised Wavelet Adaptation Network), which transfers a contour-based Cobb measurement model from the Accurate Automated Spinal Curvature Estimation 2019 benchmark (AASCE 2019) to EOS under limited target labels and further exploits unlabeled EOS scans to improve full-image robustness. F-SWAN represents each vertebra using a compact multi-scale wavelet descriptor and optimizes a geometry-aware reconstruction objective for stable contour recovery, while an Explorer--Anchor pseudo supervision scheme regularizes pseudo targets in the wavelet domain to encourage anatomically plausible geometry under cluttered full-body backgrounds. Experiments on AASCE 2019 and a private clinical EOS cohort demonstrate improved full-body Cobb angle estimation without manual cropping; notably, with only 10 labeled EOS images, F-SWAN achieves strong accuracy and approaches the fully labeled setting. 
+F-SWAN adapts a vertebral contour model from conventional radiographs to uncropped full-body EOS radiographs. It uses a DINOv3 ViT-B encoder with low-rank adaptation and represents each vertebral boundary with a multiscale wavelet descriptor. During semi-supervised training, the Explorer–Anchor framework fits quadrilaterals to predicted contours and encodes the fitted boundaries as wavelet pseudo-targets for unlabeled images.
 
-<img width="1174" height="538" alt="image" src="https://github.com/user-attachments/assets/01e6fbfb-3016-4dec-b81c-6ff50e6fcf1e" />
-<img width="1180" height="499" alt="image" src="https://github.com/user-attachments/assets/6c016a0a-6e31-49c9-ab56-14c525f892e1" />
+On the held-out EOS test set, training with 10 labeled and 70 unlabeled target images yields a circular mean absolute error of **3.13 ± 0.30°** and a mean radial error of **4.23 ± 0.53 px** across five runs. With all 80 target training images labeled, the corresponding mean angular error is **3.01°**. These are the results reported in the revised manuscript.
 
+## Single-image inference
 
-## Acknowledgements
-We thank Meta AI for making the source code of Dino V3 publicly available. ([Dino: https://github.com/facebookresearch/dinov3](https://github.com/facebookresearch/dinov3))
+Use Python 3.11 or later. Install PyTorch for your device, then install the inference dependencies and the official DINOv3 implementation in the same Python environment.
 
-## Datasets
-The dataset used in this paper is from AASCE 2019 (https://aasce19.grand-challenge.org/).
+~~~sh
+python -m pip install -r requirements.txt
+python -m pip install --no-deps "git+https://github.com/facebookresearch/dinov3.git@6876159a11b4df116f30f667f8c9888617df0751"
+~~~
 
-## Pre-trained parameters
-In this Github repository we provide the test code along with the pre-trained parameters file (shared via an online storage: model_latest.pth, link: https://pan.baidu.com/s/1O-60eWuQZnPZgjqWDl-f2w?pwd=6a5k  code: 6a5k). 
+Provide the [DINOv3 ViT-B/16 LVD-1689M backbone weights](https://github.com/facebookresearch/dinov3#pretrained-models) and a compatible F-SWAN ViT-B LoRA wavelet checkpoint. Run inference on an uncropped frontal radiograph in PNG or JPEG format.
 
+~~~sh
+python infer.py \
+  --image radiograph.png \
+  --checkpoint /path/to/fswan_wavelet.pth \
+  --dino-checkpoint /path/to/dinov3_vitb16.pth \
+  --device auto \
+  --output prediction.json
+~~~
 
+The inference pipeline resizes and pads the image to 1280 × 512 pixels, reconstructs wavelet contours, and fits vertebral corners jointly with Huber regression. The JSON output contains the proximal thoracic, main thoracic, and thoracolumbar/lumbar Cobb angles in degrees and the predicted corners in the original image coordinate system. Use `--device cpu` or `--device cuda:0` to select a device explicitly.
 
+The `model_latest.pth` link in the [previous README](https://github.com/w-haodong/F_SWAN/blob/6c681dd22eb0100b27ba25b10420ec04631e3fb5/README.md) refers to the original test release. Use weights compatible with the inference architecture described above.
+
+## Data
+
+[AASCE 2019](https://aasce19.grand-challenge.org/) provides the public source-domain radiographs. Access to the clinical EOS cohort is governed by the hospital's data access policy.
+
+## Acknowledgments
+
+We thank Meta AI for releasing [DINOv3](https://github.com/facebookresearch/dinov3).
