@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from functools import lru_cache
+from hashlib import file_digest
 import warnings
 
 import cv2
@@ -26,6 +27,7 @@ CONTOUR_POINTS = 32
 WAVELET = "db4"
 WAVELET_LEVEL = 4
 WAVELET_MODE = "symmetric"
+SLIM_CHECKPOINT_FORMAT = "fswan-lora-wavelet-v1"
 
 
 @lru_cache(maxsize=1)
@@ -70,19 +72,50 @@ def load_model(checkpoint, dino_checkpoint, device):
             raise
         raise ImportError("Install the official DINOv3 package to use this CLI.") from exc
 
-    backbone = dinov3_vitb16(pretrained=False)
-    backbone.load_state_dict(torch.load(dino_checkpoint, map_location="cpu", weights_only=True))
-    encoder = get_peft_model(
-        backbone,
-        LoraConfig(r=16, lora_alpha=32, target_modules=["qkv"], lora_dropout=0.1, bias="none"),
-    )
-    model = FSwan(encoder)
     saved = torch.load(checkpoint, map_location="cpu", weights_only=True)
     if not isinstance(saved, Mapping):
         raise ValueError("The F-SWAN checkpoint must contain a model state dictionary.")
     state = saved.get("state_dict", saved)
     if not isinstance(state, Mapping):
         raise ValueError("The checkpoint's state_dict is not a model state dictionary.")
+    slim = saved.get("format") == SLIM_CHECKPOINT_FORMAT
+
+    with open(dino_checkpoint, "rb") as backbone_file:
+        if slim:
+            expected_hash = saved.get("backbone_sha256")
+            if not isinstance(expected_hash, str) or len(expected_hash) != 64:
+                raise ValueError("The F-SWAN checkpoint is missing a valid DINOv3 SHA-256.")
+            backbone_hash = file_digest(backbone_file, "sha256").hexdigest()
+            if backbone_hash != expected_hash.lower():
+                raise ValueError("The DINOv3 weights do not match the SHA-256 in the F-SWAN checkpoint.")
+            backbone_file.seek(0)
+        backbone_state = torch.load(backbone_file, map_location="cpu", weights_only=True)
+
+    backbone = dinov3_vitb16(pretrained=False)
+    backbone.load_state_dict(backbone_state, strict=True)
+    del backbone_state
+    encoder = get_peft_model(
+        backbone,
+        LoraConfig(r=16, lora_alpha=32, target_modules=["qkv"], lora_dropout=0.1, bias="none"),
+    )
+    model = FSwan(encoder)
+    if slim:
+        full_state = model.state_dict()
+        expected = {name for name in full_state if not name.startswith("encoder.")}
+        expected.update(
+            name
+            for name, parameter in model.named_parameters()
+            if name.startswith("encoder.") and parameter.requires_grad
+        )
+        missing = sorted(expected - state.keys())
+        unexpected = sorted(state.keys() - expected, key=str)
+        if missing or unexpected:
+            raise ValueError(
+                "The F-SWAN inference checkpoint has incompatible keys "
+                f"(missing: {missing[:5]}, unexpected: {unexpected[:5]})."
+            )
+        full_state.update(state)
+        state = full_state
     model.load_state_dict(state, strict=True)
     return model.to(device=device, dtype=torch.float32).eval()
 
