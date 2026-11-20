@@ -2,6 +2,14 @@
 
 F-SWAN adapts a vertebral contour model from conventional radiographs to uncropped full-body EOS radiographs. It uses a DINOv3 ViT-B encoder with low-rank adaptation and represents each vertebral boundary with a multiscale wavelet descriptor. During semi-supervised training, the Explorer–Anchor framework fits quadrilaterals to predicted contours and encodes the fitted boundaries as wavelet pseudo-targets for unlabeled images.
 
+![Comparison of point and wavelet contour pseudo-supervision on full-body EOS radiographs](assets/figure-1-pseudo-supervision.png)
+
+*Figure 1. Comparison of point and wavelet contour pseudo-supervision on full-body EOS radiographs.*
+
+![F-SWAN training and inference framework](assets/figure-2-framework.png)
+
+*Figure 2. Overall framework of F-SWAN for Cobb angle estimation on full-body EOS radiographs.*
+
 On the held-out EOS test set, training with 10 labeled and 70 unlabeled target images yields a circular mean absolute error of **3.13 ± 0.30°** and a mean radial error of **4.23 ± 0.53 px** across five runs. With all 80 target training images labeled, the corresponding mean angular error is **3.01°**. These are the results reported in the revised manuscript.
 
 ## Single-image inference
